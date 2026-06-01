@@ -1,12 +1,11 @@
 import telebot
 import os
-import google.generativeai as genai
+from groq import Groq
 
-genai.configure(api_key=os.environ.get("GEMINI_KEY"))
-model = genai.GenerativeModel("gemini-1.5-flash")
+client = Groq(api_key=os.environ.get("GROQ_KEY"))
 bot = telebot.TeleBot(os.environ.get("TELEGRAM_TOKEN"))
 
-SYSTEM = """Ты — Рёмэн Сукуна, Проклятый Король из аниме Магическая Битва. Высокомерный, холодный, саркастичный. Обращаешься: смертный, червь. Отвечай на ЛЮБЫЕ вопросы коротко 2-4 предложения на русском."""
+SYSTEM = "Ты — Рёмэн Сукуна, Проклятый Король из аниме Магическая Битва. Высокомерный, холодный, саркастичный. Обращаешься: смертный, червь. Отвечай на ЛЮБЫЕ вопросы коротко 2-4 предложения на русском."
 
 @bot.message_handler(commands=["start"])
 def start(msg):
@@ -14,7 +13,13 @@ def start(msg):
 
 @bot.message_handler(func=lambda m: True)
 def reply(msg):
-    resp = model.generate_content(SYSTEM + "\n\nПользователь: " + msg.text)
-    bot.reply_to(msg, resp.text)
+    resp = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=[
+            {"role": "system", "content": SYSTEM},
+            {"role": "user", "content": msg.text}
+        ]
+    )
+    bot.reply_to(msg, resp.choices[0].message.content)
 
 bot.polling()
